@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nutshells — Book Summaries</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<div class="page">
+
+  <div class="masthead">
+    <div class="brand">
+      <svg width="52" height="52" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="12" y="6" width="32" height="40" rx="3" fill="#c8ddd0" transform="rotate(-8 12 6)"/>
+        <rect x="12" y="6" width="32" height="40" rx="3" fill="#5a8a6a" transform="rotate(-4 12 6)"/>
+        <rect x="10" y="8" width="32" height="40" rx="3" fill="#2d5a3d"/>
+        <rect x="10" y="8" width="6" height="40" rx="2" fill="#1a3d28"/>
+        <line x1="20" y1="18" x2="38" y2="18" stroke="#e8f5ee" stroke-width="2" stroke-linecap="round" opacity="0.9"/>
+        <line x1="20" y1="24" x2="38" y2="24" stroke="#e8f5ee" stroke-width="2" stroke-linecap="round" opacity="0.9"/>
+        <line x1="20" y1="30" x2="38" y2="30" stroke="#e8f5ee" stroke-width="2" stroke-linecap="round" opacity="0.9"/>
+        <line x1="20" y1="36" x2="32" y2="36" stroke="#e8f5ee" stroke-width="2" stroke-linecap="round" opacity="0.9"/>
+      </svg>
+      <div class="brand-text">
+        <h1><em>Nutshells</em></h1>
+        <p class="tagline">Discover the story — <span>keep the surprises.</span></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="search-area">
+    <label>Enter a book title (and optionally the author)</label>
+    <div class="input-row">
+      <input type="text" id="bookInput" placeholder="e.g. The Great Gatsby, or Dune by Frank Herbert" />
+      <button class="btn-search" id="searchBtn" onclick="summarizeBook()">Summarise →</button>
+    </div>
+    <p class="examples">
+      <span>Try:</span>
+      <a onclick="fillAndSearch('Crime and Punishment')">Crime and Punishment</a>
+      <a onclick="fillAndSearch('The Alchemist by Paulo Coelho')">The Alchemist</a>
+      <a onclick="fillAndSearch('To Kill a Mockingbird')">To Kill a Mockingbird</a>
+    </p>
+  </div>
+
+  <div class="error-msg" id="errorMsg"></div>
+
+  <div class="loading-state" id="loadingState">
+    <div class="girl-reading">
+      <svg width="120" height="140" viewBox="0 0 120 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="60" cy="105" rx="28" ry="30" fill="#5a8a6a"/>
+        <ellipse cx="60" cy="118" rx="28" ry="18" fill="#4a7a5a"/>
+        <rect x="55" y="68" width="10" height="12" fill="#f5d5b0"/>
+        <circle cx="60" cy="58" r="20" fill="#f5d5b0"/>
+        <ellipse cx="60" cy="44" rx="20" ry="14" fill="#2d1f14"/>
+        <ellipse cx="40" cy="58" rx="7" ry="16" fill="#2d1f14"/>
+        <circle cx="78" cy="42" r="8" fill="#2d1f14"/>
+        <ellipse cx="52" cy="60" rx="3" ry="2" fill="#2d1f14"/>
+        <ellipse cx="68" cy="60" rx="3" ry="2" fill="#2d1f14"/>
+        <line x1="50" y1="63" x2="50" y2="65" stroke="#2d1f14" stroke-width="1"/>
+        <line x1="54" y1="63" x2="54" y2="65" stroke="#2d1f14" stroke-width="1"/>
+        <line x1="66" y1="63" x2="66" y2="65" stroke="#2d1f14" stroke-width="1"/>
+        <line x1="70" y1="63" x2="70" y2="65" stroke="#2d1f14" stroke-width="1"/>
+        <path d="M54 67 Q60 71 66 67" stroke="#c8923a" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+        <path d="M38 95 Q28 105 32 118" stroke="#f5d5b0" stroke-width="8" stroke-linecap="round" fill="none"/>
+        <path d="M82 95 Q92 105 88 118" stroke="#f5d5b0" stroke-width="8" stroke-linecap="round" fill="none"/>
+        <rect x="28" y="112" width="30" height="22" rx="2" fill="#fffcf6" stroke="#c8ddd0" stroke-width="1.5"/>
+        <rect x="58" y="112" width="30" height="22" rx="2" fill="#f0ede6" stroke="#c8ddd0" stroke-width="1.5" class="page-right"/>
+        <rect x="56" y="112" width="4" height="22" fill="#2d5a3d"/>
+        <line x1="33" y1="119" x2="54" y2="119" stroke="#c8ddd0" stroke-width="1"/>
+        <line x1="33" y1="123" x2="54" y2="123" stroke="#c8ddd0" stroke-width="1"/>
+        <line x1="33" y1="127" x2="48" y2="127" stroke="#c8ddd0" stroke-width="1"/>
+        <line x1="63" y1="119" x2="84" y2="119" stroke="#c8ddd0" stroke-width="1"/>
+        <line x1="63" y1="123" x2="84" y2="123" stroke="#c8ddd0" stroke-width="1"/>
+        <line x1="63" y1="127" x2="78" y2="127" stroke="#c8ddd0" stroke-width="1"/>
+      </svg>
+    </div>
+    <p class="loading-text">Reading between the lines…</p>
+    <p class="loading-sub">Finding all the good bits without the spoilers</p>
+  </div>
+
+  <div class="result-area" id="resultArea">
+    <div class="book-header">
+      <div class="book-spine" id="bookSpine"></div>
+      <div class="book-meta">
+        <h2 id="bookTitle"></h2>
+        <p class="author" id="bookAuthor"></p>
+        <span class="genre-tag" id="bookGenre"></span>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-label"><span class="icon">🎭</span> Characters</div>
+      <div class="characters-grid" id="charactersGrid"></div>
+    </div>
+
+    <div class="divider">· · ·</div>
+
+    <div class="section">
+      <div class="section-label"><span class="icon">📖</span> The Story</div>
+      <div class="plot-text" id="plotText"></div>
+    </div>
+
+    <div class="divider">· · ·</div>
+
+    <div class="section">
+      <div class="section-label"><span class="icon">🌅</span> Where things are heading…</div>
+      <div class="ending-box">
+        <p id="openEndingText"></p>
+      </div>
+    </div>
+
+    <button class="new-search-btn" onclick="resetSearch()">← Search another book</button>
+  </div>
+
+</div>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

@@ -45,7 +45,7 @@ Include 3-5 characters. Raw JSON only. No line breaks inside string values."""
                 "Content-Type": "application/json"
             },
             json={
-                "model": "mistral-small-latest",
+                "model": "mistral-large-latest",
                 "messages": [{"role": "user", "content": prompt}],
                 "temperature": 0.7
             }

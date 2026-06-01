@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Nutshells — Book Summaries</title>
+<title>Nutshells | Book Summaries</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
@@ -26,7 +26,7 @@
       </svg>
       <div class="brand-text">
         <h1><em>Nutshells</em></h1>
-        <p class="tagline">Discover the story — <span>keep the surprises.</span></p>
+        <p class="tagline">Discover the story · <span>keep the surprises.</span></p>
       </div>
     </div>
   </div>
@@ -35,14 +35,20 @@
     <label>Enter a book title (and optionally the author)</label>
     <div class="input-row">
       <input type="text" id="bookInput" placeholder="e.g. The Great Gatsby, or Dune by Frank Herbert" />
-      <button class="btn-search" id="searchBtn" onclick="summarizeBook()">Summarise →</button>
+      <button class="btn-search" id="searchBtn" onclick="searchBooks()">Summarise →</button>
     </div>
     <p class="examples">
       <span>Try:</span>
       <a onclick="fillAndSearch('Crime and Punishment')">Crime and Punishment</a>
-      <a onclick="fillAndSearch('The Alchemist by Paulo Coelho')">The Alchemist</a>
+      <a onclick="fillAndSearch('The Alchemist')">The Alchemist</a>
       <a onclick="fillAndSearch('To Kill a Mockingbird')">To Kill a Mockingbird</a>
     </p>
+  </div>
+
+  <div class="book-picker" id="bookPicker" style="display:none">
+    <p class="picker-label">We found a few books matching your search — which one did you mean?</p>
+    <div class="picker-list" id="pickerList"></div>
+    <button class="picker-cancel" onclick="cancelPicker()">← Search again</button>
   </div>
 
   <div class="error-msg" id="errorMsg"></div>
@@ -88,6 +94,7 @@
         <h2 id="bookTitle"></h2>
         <p class="author" id="bookAuthor"></p>
         <span class="genre-tag" id="bookGenre"></span>
+<span class="rating-tag" id="bookRating" style="display:none"></span>
       </div>
     </div>
 
@@ -111,6 +118,7 @@
         <p id="openEndingText"></p>
       </div>
     </div>
+
 
     <button class="new-search-btn" onclick="resetSearch()">← Search another book</button>
   </div>

@@ -11,20 +11,31 @@ function getSpineColor(title) {
 
 function fillAndSearch(val) {
   document.getElementById('bookInput').value = val;
-  summarizeBook();
+  searchBooks();
 }
 
 function resetSearch() {
   document.getElementById('resultArea').style.display = 'none';
+  document.getElementById('bookPicker').style.display = 'none';
   document.getElementById('bookInput').value = '';
   document.getElementById('bookInput').focus();
 }
 
+function cancelPicker() {
+  document.getElementById('bookPicker').style.display = 'none';
+  document.getElementById('bookInput').focus();
+}
+
+function toggleFeedback() {
+  const form = document.getElementById('feedbackForm');
+  form.style.display = form.style.display === 'none' ? 'block' : 'none';
+}
+
 document.getElementById('bookInput').addEventListener('keydown', e => {
-  if (e.key === 'Enter') summarizeBook();
+  if (e.key === 'Enter') searchBooks();
 });
 
-async function summarizeBook() {
+async function searchBooks() {
   const query = document.getElementById('bookInput').value.trim();
   if (!query) return;
 
@@ -32,6 +43,89 @@ async function summarizeBook() {
   const loading = document.getElementById('loadingState');
   const result = document.getElementById('resultArea');
   const error = document.getElementById('errorMsg');
+  const picker = document.getElementById('bookPicker');
+
+  btn.disabled = true;
+  result.style.display = 'none';
+  error.style.display = 'none';
+  picker.style.display = 'none';
+  loading.style.display = 'block';
+
+  try {
+    const res = await fetch('/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query })
+    });
+
+    const data = await res.json();
+    loading.style.display = 'none';
+
+   if (!data.books || data.books.length === 0) {
+  summarizeBook(query, null);
+  return;
+}
+
+if (data.books.length === 1) {
+  summarizeBook(query, data.books[0]);
+  return;
+}
+
+// If user included author, go straight to summary with first result
+if (query.toLowerCase().includes(' by ')) {
+  summarizeBook(query, data.books[0]);
+  return;
+}
+
+    showPicker(data.books, query);
+
+  } catch (err) {
+    loading.style.display = 'none';
+    error.textContent = "Something went wrong. Please try again.";
+    error.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function showPicker(books, query) {
+  const picker = document.getElementById('bookPicker');
+  const list = document.getElementById('pickerList');
+  list.innerHTML = '';
+
+  books.forEach(book => {
+    const item = document.createElement('div');
+    item.className = 'picker-item';
+    item.onclick = () => {
+      document.getElementById('bookPicker').style.display = 'none';
+      document.getElementById('loadingState').style.display = 'block';
+      summarizeBook(query, book);
+    };
+
+    const img = book.thumbnail
+      ? `<img src="${book.thumbnail}" alt="${book.title}">`
+      : `<div class="picker-item-no-img">${book.title.charAt(0)}</div>`;
+
+    item.innerHTML = `
+      ${img}
+      <div class="picker-info">
+        <div class="picker-title">${book.title}</div>
+        <div class="picker-author">by ${book.author}</div>
+        ${book.year ? `<div class="picker-year">${book.year}</div>` : ''}
+      </div>
+      <span style="color:var(--sage);font-size:1.2rem">→</span>
+    `;
+    list.appendChild(item);
+  });
+
+  picker.style.display = 'block';
+}
+
+async function summarizeBook(query, selectedBook) {
+  const loading = document.getElementById('loadingState');
+  const result = document.getElementById('resultArea');
+  const error = document.getElementById('errorMsg');
+  const btn = document.getElementById('searchBtn');
 
   btn.disabled = true;
   result.style.display = 'none';
@@ -39,10 +133,19 @@ async function summarizeBook() {
   loading.style.display = 'block';
 
   try {
+    const payload = { query };
+    if (selectedBook) {
+  payload.selected_title = selectedBook.title;
+  payload.selected_author = selectedBook.author;
+  payload.selected_description = selectedBook.description;
+  payload.selected_categories = selectedBook.categories;
+  payload.selected_ol_key = selectedBook.ol_key || "";
+}
+
     const res = await fetch('/summarize', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query })
+      body: JSON.stringify(payload)
     });
 
     const book = await res.json();
@@ -88,7 +191,50 @@ function renderResult(book) {
   plotEl.innerHTML = book.plot.split('\n').filter(p => p.trim()).map(p => `<p>${p}</p>`).join('');
 
   document.getElementById('openEndingText').textContent = book.openEnding;
-
+const ratingEl = document.getElementById('bookRating');
+if (book.rating && book.rating.average) {
+  const stars = Math.round(book.rating.average);
+  const starStr = '★'.repeat(stars) + '☆'.repeat(5 - stars);
+  ratingEl.textContent = `${starStr} ${book.rating.average}/5 (${book.rating.count.toLocaleString()} ratings)`;
+  ratingEl.style.display = 'inline-flex';
+} else {
+  ratingEl.style.display = 'none';
+}
   document.getElementById('resultArea').style.display = 'block';
   document.getElementById('resultArea').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function refineSummary() {
+  const feedback = document.getElementById('feedbackInput').value.trim();
+  const query = document.getElementById('bookInput').value.trim();
+
+  if (!feedback) return;
+
+  const btn = document.querySelector('.btn-refine');
+  btn.textContent = 'Regenerating…';
+  btn.disabled = true;
+
+  try {
+    const res = await fetch('/refine', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, feedback })
+    });
+
+    const book = await res.json();
+
+    if (book.error) {
+      alert('Could not refine. Please try again.');
+    } else {
+      document.getElementById('feedbackForm').style.display = 'none';
+      document.getElementById('feedbackInput').value = '';
+      renderResult(book);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  } catch (err) {
+    alert('Something went wrong. Please try again.');
+  } finally {
+    btn.textContent = 'Regenerate with correction →';
+    btn.disabled = false;
+  }
 }

@@ -73,7 +73,7 @@ if (data.books.length === 1) {
 
 // If user included author, go straight to summary with first result
 if (query.toLowerCase().includes(' by ')) {
-  summarizeBook(query, data.books[0]);
+  showPicker(data.books, query);
   return;
 }
 

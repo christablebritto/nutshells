@@ -67,7 +67,7 @@ async function searchBooks() {
 }
 
 if (data.books.length === 1) {
-  summarizeBook(query, data.books[0]);
+  showPicker(data.books, query);
   return;
 }
 

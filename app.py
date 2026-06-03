@@ -75,7 +75,7 @@ def search_open_library(query):
                 is_study_guide = any(kw in result_title_lower for kw in SKIP_KEYWORDS) or any(kw in author_str for kw in ['spark', 'cliffs', 'gradesaver'])
 
                 exact_match = result_title_lower.strip() == query_title.strip()
-                close_match = match_ratio >= 0.8 and reverse_ratio >= 0.9 and not is_study_guide
+                close_match = match_ratio >= 0.8 and reverse_ratio >= 0.5 and not is_study_guide
 
                 if exact_match or close_match:
                     author_name = ", ".join(doc.get("author_name", ["Unknown"]))

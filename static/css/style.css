@@ -389,6 +389,20 @@ body::before {
   border: 1px solid var(--gold-light);
 }
 
+.rating-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 4px 12px;
+  border-radius: 20px;
+  background: #fff8e8;
+  color: #b8860b;
+  border: 1px solid #f0dfc0;
+  margin-left: 0.5rem;
+}
+
 .section { margin-bottom: 2.5rem; }
 
 .section-label {

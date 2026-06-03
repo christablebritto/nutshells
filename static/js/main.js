@@ -66,6 +66,7 @@ async function searchBooks() {
   return;
 }
 
+console.log("Books found:", data.books.length);
 if (data.books.length === 1) {
   showPicker(data.books, query);
   return;

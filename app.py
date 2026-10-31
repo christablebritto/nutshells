@@ -109,22 +109,11 @@ def search_open_library(query):
     return []
 
 
-def get_book_info(query):
-    try:
-        books = search_open_library(query)
-        if books:
-            return {
-                "title": books[0]["title"],
-                "authors": books[0]["author"],
-                "description": books[0]["description"],
-                "categories": books[0]["categories"]
-            }
-    except Exception as e:
-        print("Open Library error:", e)
-    return None
-
-
 def call_mistral(prompt):
+    """Send the prompt to Mistral and parse the JSON reply."""
+    if not MISTRAL_API_KEY:
+        raise RuntimeError("The summary service API key is not configured.")
+
     response = requests.post(
         url="https://api.mistral.ai/v1/chat/completions",
         headers={
@@ -135,9 +124,47 @@ def call_mistral(prompt):
             "model": "mistral-large-latest",
             "messages": [{"role": "user", "content": prompt}],
             "temperature": 0.7
-        }
+        },
+        timeout=60
     )
-    result = response.json()
+
+    try:
+        result = response.json()
+    except ValueError:
+        print(
+            "Mistral returned a non-JSON response. Status:",
+            response.status_code,
+            flush=True
+        )
+        raise RuntimeError(
+            "The summary service returned an unexpected response."
+        )
+
+    if not response.ok or not result.get("choices"):
+        print(
+            "Mistral error:",
+            response.status_code,
+            result,
+            flush=True
+        )
+        raise RuntimeError(
+            "The summary service is temporarily unavailable. Please try again later."
+        )
+
+    text = result["choices"][0]["message"]["content"].strip()
+    text = re.sub(r'```[a-zA-Z]*', '', text).strip()
+    start = text.find('{')
+    end = text.rfind('}') + 1
+    if start != -1 and end > start:
+        text = text[start:end]
+    text = text.replace('\r', '')
+    text = re.sub(r'(?<!\\)\n', ' ', text)
+    return json.loads(text)
+
+    if "choices" not in result:
+        print("Mistral error:", response.status_code, result)
+        raise Exception("The summary service is temporarily unavailable. Please try again later.")
+
     text = result["choices"][0]["message"]["content"].strip()
     text = re.sub(r'```[a-zA-Z]*', '', text).strip()
     start = text.find('{')

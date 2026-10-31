@@ -121,7 +121,7 @@ def call_mistral(prompt):
             "Content-Type": "application/json"
         },
         json={
-            "model": "mistral-large-latest",
+            "model": "mistral-medium-latest",
             "messages": [{"role": "user", "content": prompt}],
             "temperature": 0.7
         },

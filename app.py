@@ -123,7 +123,8 @@ def call_mistral(prompt):
         json={
             "model": "mistral-medium-latest",
             "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0.7
+            "temperature": 0.7,
+"max_tokens": 2048
         },
         timeout=60
     )

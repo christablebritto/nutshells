@@ -634,7 +634,7 @@ body::before {
   font-family: 'Playfair Display', serif;
   font-size: 1.05rem;
   line-height: 1.7;
-  color: var(--sage-dark);
+  color: #8a6a1f;
   text-align: center;
   margin-bottom: 2rem;
 }

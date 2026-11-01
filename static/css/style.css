@@ -630,3 +630,15 @@ body::before {
   .characters-grid { grid-template-columns: 1fr; }
   .masthead h1 { font-size: 2.2rem; }
 }
+   .maintenance-banner {
+     background: var(--gold-pale);
+     border: 1.5px solid var(--gold-light);
+     border-radius: var(--radius-sm);
+     color: #8a6a1f;
+     font-family: 'Playfair Display', serif;
+     font-size: 1rem;
+     line-height: 1.7;
+     padding: 1rem 1.4rem;
+     margin-bottom: 2rem;
+     text-align: center;
+   }

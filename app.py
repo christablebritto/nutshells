@@ -129,7 +129,7 @@ def get_book_info(query):
 def call_llm(prompt):
     """Send the prompt to Gemini and parse the JSON reply."""
     response = requests.post(
-        url=f"https://generativelanguage.googleapis.com/v1beta/models/{gemini-3.5-flash-lite}:generateContent",
+       url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
         headers={
             "x-goog-api-key": GEMINI_API_KEY,
             "Content-Type": "application/json"

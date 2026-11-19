@@ -6,7 +6,8 @@ import re
 
 app = Flask(__name__)
 
-MISTRAL_API_KEY = os.environ.get("MISTRAL_API_KEY")
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+GEMINI_MODEL = "gemini-3.5-flash-lite"
 
 SKIP_KEYWORDS = ['cliffsnotes', 'sparknotes', 'gradesaver', 'study guide',
                  'criticism', 'annotated', 'interpretation', 'how to',
@@ -24,7 +25,7 @@ def get_ol_description(ol_key):
         if isinstance(desc, dict):
             return desc.get("value", "")
         return desc if isinstance(desc, str) else ""
-    except:
+    except Exception:
         return ""
 
 
@@ -49,9 +50,12 @@ def search_open_library(query):
             parts = query.lower().split(" by ")
             title = parts[0].strip()
             author = parts[1].strip()
-            url = f"https://openlibrary.org/search.json?title={requests.utils.quote(title)}&author={requests.utils.quote(author)}&limit=5&fields=title,author_name,first_publish_year,subject,cover_i,key,description"
+            url = (f"https://openlibrary.org/search.json?title={requests.utils.quote(title)}"
+                   f"&author={requests.utils.quote(author)}&limit=5"
+                   f"&fields=title,author_name,first_publish_year,subject,cover_i,key,description")
         else:
-            url = f"https://openlibrary.org/search.json?title={requests.utils.quote(query)}&limit=10&fields=title,author_name,first_publish_year,subject,cover_i,key,description"
+            url = (f"https://openlibrary.org/search.json?title={requests.utils.quote(query)}"
+                   f"&limit=10&fields=title,author_name,first_publish_year,subject,cover_i,key,description")
 
         response = requests.get(url, timeout=10)
         data = response.json()
@@ -72,7 +76,8 @@ def search_open_library(query):
                 match_ratio = len(matching_words) / len(query_words) if query_words else 0
                 reverse_ratio = len(matching_words) / len(result_words) if result_words else 0
 
-                is_study_guide = any(kw in result_title_lower for kw in SKIP_KEYWORDS) or any(kw in author_str for kw in ['spark', 'cliffs', 'gradesaver'])
+                is_study_guide = (any(kw in result_title_lower for kw in SKIP_KEYWORDS) or
+                                  any(kw in author_str for kw in ['spark', 'cliffs', 'gradesaver']))
 
                 exact_match = result_title_lower.strip() == query_title.strip()
                 close_match = match_ratio >= 0.8 and reverse_ratio >= 0.5 and not is_study_guide
@@ -109,64 +114,40 @@ def search_open_library(query):
     return []
 
 
-def call_mistral(prompt):
-    """Send the prompt to Mistral and parse the JSON reply."""
-    if not MISTRAL_API_KEY:
-        raise RuntimeError("The summary service API key is not configured.")
+def get_book_info(query):
+    books = search_open_library(query)
+    if books:
+        return {
+            "title": books[0]["title"],
+            "authors": books[0]["author"],
+            "description": books[0]["description"],
+            "categories": books[0]["categories"]
+        }
+    return None
 
+
+def call_llm(prompt):
+    """Send the prompt to Gemini and parse the JSON reply."""
     response = requests.post(
-        url="https://api.mistral.ai/v1/chat/completions",
+        url=f"https://generativelanguage.googleapis.com/v1beta/models/{gemini-3.5-flash-lite}:generateContent",
         headers={
-            "Authorization": f"Bearer {MISTRAL_API_KEY}",
+            "x-goog-api-key": GEMINI_API_KEY,
             "Content-Type": "application/json"
         },
         json={
-            "model": "mistral-medium-latest",
-            "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0.7,
-"max_tokens": 2048
+            "contents": [{"parts": [{"text": prompt}]}],
+            "generationConfig": {"temperature": 0.7}
         },
         timeout=60
     )
+    result = response.json()
 
-    try:
-        result = response.json()
-    except ValueError:
-        print(
-            "Mistral returned a non-JSON response. Status:",
-            response.status_code,
-            flush=True
-        )
-        raise RuntimeError(
-            "The summary service returned an unexpected response."
-        )
-
-    if not response.ok or not result.get("choices"):
-        print(
-            "Mistral error:",
-            response.status_code,
-            result,
-            flush=True
-        )
-        raise RuntimeError(
-            "The summary service is temporarily unavailable. Please try again later."
-        )
-
-    text = result["choices"][0]["message"]["content"].strip()
-    text = re.sub(r'```[a-zA-Z]*', '', text).strip()
-    start = text.find('{')
-    end = text.rfind('}') + 1
-    if start != -1 and end > start:
-        text = text[start:end]
-    text = text.replace('\r', '')
-    text = re.sub(r'(?<!\\)\n', ' ', text)
-    return json.loads(text)
-
-    if "choices" not in result:
-        print("Mistral error:", response.status_code, result)
+    if "candidates" not in result:
+        print("Gemini error:", response.status_code, result)
         raise Exception("The summary service is temporarily unavailable. Please try again later.")
 
-    text = result["choices"][0]["message"]["content"].strip()
+    parts = result["candidates"][0].get("content", {}).get("parts", [])
+    text = "".join(p.get("text", "") for p in parts).strip()
     text = re.sub(r'```[a-zA-Z]*', '', text).strip()
     start = text.find('{')
     end = text.rfind('}') + 1
@@ -190,8 +171,6 @@ def search():
         return jsonify({"error": "Please enter a book title."}), 400
     books = search_open_library(query)
     print(f"Search for '{query}' returned {len(books)} books")
-    if not books:
-        return jsonify({"books": []})
     return jsonify({"books": books})
 
 
@@ -211,13 +190,21 @@ def summarize():
     rating = get_book_rating(selected_ol_key) if selected_ol_key else None
 
     if selected_description:
-        context = f"Here is the real information about this book:\nTitle: {selected_title}\nAuthor: {selected_author}\nGenre: {selected_categories}\nDescription: {selected_description}\n\nUse this information to generate an accurate summary."
+        context = (f"Here is the real information about this book:\nTitle: {selected_title}\n"
+                   f"Author: {selected_author}\nGenre: {selected_categories}\n"
+                   f"Description: {selected_description}\n\n"
+                   f"Use this information to generate an accurate summary.")
     else:
         book_info = get_book_info(query)
         if book_info and book_info["description"]:
-            context = f"Here is the real information about this book:\nTitle: {book_info['title']}\nAuthor: {book_info['authors']}\nGenre: {book_info['categories']}\nDescription: {book_info['description']}\n\nUse this information to generate an accurate summary."
+            context = (f"Here is the real information about this book:\nTitle: {book_info['title']}\n"
+                       f"Author: {book_info['authors']}\nGenre: {book_info['categories']}\n"
+                       f"Description: {book_info['description']}\n\n"
+                       f"Use this information to generate an accurate summary.")
         else:
-            context = f"The user is looking for a summary of: {query}. Only summarize this exact book. If you are not 100% certain about this book's plot and characters, say so honestly rather than guessing."
+            context = (f"The user is looking for a summary of: {query}. Only summarize this exact book. "
+                       f"If you are not 100% certain about this book's plot and characters, "
+                       f"say so honestly rather than guessing.")
 
     prompt = f"""You are a literary assistant for a book summary app called Nutshells.
 
@@ -239,55 +226,9 @@ Return ONLY a valid JSON object. No markdown. No code fences. No backticks. Star
 Include 3-5 characters. Raw JSON only. No line breaks inside string values."""
 
     try:
-        book = call_mistral(prompt)
+        book = call_llm(prompt)
         if rating:
             book["rating"] = rating
-        return jsonify(book)
-    except json.JSONDecodeError as e:
-        print("JSON error:", e)
-        return jsonify({"error": "Could not parse the book data. Please try again."}), 500
-    except Exception as e:
-        print("Error:", e)
-        return jsonify({"error": str(e)}), 500
-
-
-@app.route("/refine", methods=["POST"])
-def refine():
-    data = request.get_json()
-    query = data.get("query", "").strip()
-    feedback = data.get("feedback", "").strip()
-
-    if not query or not feedback:
-        return jsonify({"error": "Missing information."}), 400
-
-    book_info = get_book_info(feedback) or get_book_info(query)
-
-    if book_info and book_info["description"]:
-        context = f"Here is the real information about this book:\nTitle: {book_info['title']}\nAuthor: {book_info['authors']}\nGenre: {book_info['categories']}\nDescription: {book_info['description']}\n\nThe user also provided this correction: {feedback}\n\nUse this information to generate an accurate summary."
-    else:
-        context = f"The user searched for: \"{query}\"\nThe previous summary was wrong. User correction: \"{feedback}\"\nPlease generate an accurate summary based on the correction."
-
-    prompt = f"""You are a literary assistant for a book summary app called Nutshells.
-
-{context}
-
-Return ONLY a valid JSON object. No markdown. No code fences. No backticks. Start with {{ and end with }}.
-
-{{
-  "title": "Full book title",
-  "author": "Author name",
-  "genre": "Genre in plain English",
-  "characters": [
-    {{ "name": "Name", "role": "Protagonist / Antagonist / Supporting", "description": "2-3 sentences about them." }}
-  ],
-  "plot": "3-4 paragraph summary separated by \\n\\n. Do NOT reveal the ending.",
-  "openEnding": "2-3 sentences hinting at what lies ahead without spoiling the ending."
-}}
-
-Include 3-5 characters. Raw JSON only. No line breaks inside string values."""
-
-    try:
-        book = call_mistral(prompt)
         return jsonify(book)
     except json.JSONDecodeError as e:
         print("JSON error:", e)

@@ -9,13 +9,26 @@ app = Flask(__name__)
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 GEMINI_MODEL = "gemini-3.5-flash-lite"
 
-MAX_PICKER_RESULTS = 15
+MAX_PICKER_RESULTS = 10
 
 SKIP_KEYWORDS = ['cliffsnotes', 'sparknotes', 'gradesaver', 'study guide',
                  'criticism', 'annotated', 'interpretation', 'how to',
                  'companion', 'graphic novel', 'illustrated', ' notes',
                  'in america', 'neutronium', 'nineteenth-century',
                  "dostoyevsky's", "dostoevsky's"]
+
+ORG_AUTHOR_WORDS = ['parliament', 'great britain', 'committee', 'commission',
+                    'department', 'ministry', 'congress']
+
+
+def normalize_title(text):
+    """Lowercase, strip punctuation and a leading article, so titles compare fairly."""
+    text = re.sub(r'[^\w\s]', ' ', text.lower())
+    text = re.sub(r'\s+', ' ', text).strip()
+    for article in ('the ', 'a ', 'an '):
+        if text.startswith(article):
+            return text[len(article):]
+    return text
 
 
 def get_ol_description(ol_key):
@@ -49,7 +62,7 @@ def get_book_rating(ol_key):
 
 
 def search_open_library(query):
-    """Search Open Library. Returns a list of books, or None if the search itself failed."""
+    """Search Open Library in tiers. Returns a list of books, or None if the search failed."""
     if " by " in query.lower():
         parts = query.lower().split(" by ", 1)
         title = parts[0].strip()
@@ -74,49 +87,58 @@ def search_open_library(query):
     if data is None:
         return None
 
-    books = []
-    seen = set()
     query_title = query.lower().split(" by ")[0].strip()
-    query_words = set(query_title.split())
+    query_norm = normalize_title(query_title)
+    query_words = set(query_norm.split())
+
+    exact, starts, close = [], [], []
+    seen = set()
 
     for doc in data.get("docs", []):
         result_title = doc.get("title", "")
-        result_title_lower = result_title.lower()
-        result_words = set(result_title_lower.split())
+        if not result_title:
+            continue
+        title_norm = normalize_title(result_title)
+        title_words = set(title_norm.split())
         author_str = ", ".join(doc.get("author_name", [])).lower()
 
-        matching_words = query_words & result_words
-        match_ratio = len(matching_words) / len(query_words) if query_words else 0
-        reverse_ratio = len(matching_words) / len(result_words) if result_words else 0
-
-        is_study_guide = (any(kw in result_title_lower for kw in SKIP_KEYWORDS) or
+        is_study_guide = (any(kw in result_title.lower() for kw in SKIP_KEYWORDS) or
                           any(kw in author_str for kw in ['spark', 'cliffs', 'gradesaver']))
-
-        exact_match = result_title_lower.strip() == query_title
-        close_match = match_ratio >= 0.8 and reverse_ratio >= 0.5
-
-        if not (exact_match or close_match) or is_study_guide:
+        is_org_author = any(w in author_str for w in ORG_AUTHOR_WORDS)
+        if is_study_guide or is_org_author:
             continue
 
         author_name = ", ".join(doc.get("author_name", ["Unknown"]))
-        year = str(doc.get("first_publish_year", ""))
-        key = f"{result_title_lower}|{author_name.lower()}"
+        key = f"{title_norm}|{author_name.lower()}"
         if key in seen:
             continue
         seen.add(key)
 
-        books.append({
+        book = {
             "title": result_title,
             "author": author_name,
-            "year": year,
+            "year": str(doc.get("first_publish_year", "")),
             "description": "",
             "categories": ", ".join(doc.get("subject", [])[:3]),
             "thumbnail": f"https://covers.openlibrary.org/b/id/{doc['cover_i']}-M.jpg" if doc.get("cover_i") else "",
             "ol_key": doc.get("key", "")
-        })
+        }
 
+        matching = query_words & title_words
+        match_ratio = len(matching) / len(query_words) if query_words else 0
+        reverse_ratio = len(matching) / len(title_words) if title_words else 0
+
+        if title_norm == query_norm:
+            exact.append(book)
+        elif title_norm.startswith(query_norm + " "):
+            starts.append(book)
+        elif match_ratio >= 0.8 and reverse_ratio >= 0.5:
+            close.append(book)
+
+    books = exact or starts or close
     books.sort(key=lambda x: int(x['year']) if x['year'].isdigit() else 9999)
-    print(f"Open Library results for '{query}': {[(b['title'], b['author'], b['year']) for b in books]}")
+    print(f"Open Library results for '{query}': exact={len(exact)} starts={len(starts)} close={len(close)}")
+    print([(b['title'], b['author'], b['year']) for b in books[:MAX_PICKER_RESULTS]])
     return books[:MAX_PICKER_RESULTS]
 
 

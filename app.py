@@ -239,7 +239,14 @@ Return ONLY a valid JSON object. No markdown. No code fences. No backticks. Star
   "openEnding": "2-3 sentences hinting at what lies ahead without spoiling the ending."
 }}
 
-Include 3-5 characters. Raw JSON only. No line breaks inside string values."""
+Include 3-5 characters. Raw JSON only. No line breaks inside string values.
+
+Writing rules:
+- Write for a general audience, including teenagers, in a neutral and respectful tone.
+- Do not use graphic, explicit or sensational language. For sensitive subjects such as sexual violence, abuse, suicide, racism or war, refer to them briefly and in general terms (for example "falsely accused of a serious crime against a white woman" or "faces violence"). Never describe the acts themselves.
+- Never use slurs or offensive terms, even if they appear in the book.
+- Describe racism and injustice factually, as themes of the story, without endorsing them.
+- Stay spoiler-free."""
 
     try:
         book = call_llm(prompt)

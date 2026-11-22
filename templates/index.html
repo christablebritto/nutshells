@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Nutshells | Book Summaries</title>
+<title>Nutshells | Discover the Story</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
@@ -45,8 +45,6 @@
     </p>
   </div>
 
-    
-   </div>
   <div class="book-picker" id="bookPicker" style="display:none">
     <p class="picker-label">We found a few books matching your search — which one did you mean?</p>
     <div class="picker-list" id="pickerList"></div>
@@ -96,7 +94,7 @@
         <h2 id="bookTitle"></h2>
         <p class="author" id="bookAuthor"></p>
         <span class="genre-tag" id="bookGenre"></span>
-<span class="rating-tag" id="bookRating" style="display:none"></span>
+        <span class="rating-tag" id="bookRating" style="display:none"></span>
       </div>
     </div>
 
@@ -121,11 +119,10 @@
       </div>
     </div>
 
-
     <button class="new-search-btn" onclick="resetSearch()">← Search another book</button>
   </div>
 
 </div>
-<script src="{{ url_for('static', filename='js/main.js') }}?v=3"></script>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
-</html>  
+</html>

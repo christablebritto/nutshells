@@ -62,7 +62,10 @@ async function searchBooks() {
     loading.style.display = 'none';
 
    if (!data.books || data.books.length === 0) {
-  summarizeBook(query, null);
+  error.textContent = data.failed
+    ? "Book search is having trouble right now. Please try again in a moment."
+    : "No matching books found. Try adding the author, like: Title by Author.";
+  error.style.display = 'block';
   return;
 }
 
